@@ -1,0 +1,55 @@
+name: Article review
+
+on:
+  workflow_dispatch:
+    inputs:
+      article_url:
+        description: URL of the public article to review
+        required: true
+        type: string
+      comments_url:
+        description: Optional URL containing user comments or discussion
+        required: false
+        type: string
+      target_repo:
+        description: GitHub repository to compare against (owner/name)
+        required: true
+        type: string
+      target_ref:
+        description: Branch, tag, or commit in the target repository
+        required: true
+        default: main
+        type: string
+      model:
+        description: Anthropic model name
+        required: true
+        default: claude-sonnet-4-20250514
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out workflow
+        uses: actions/checkout@v4
+
+      - name: Run article and codebase review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEW_GITHUB_TOKEN: ${{ secrets.REVIEW_GITHUB_TOKEN }}
+          ARTICLE_URL: ${{ inputs.article_url }}
+          COMMENTS_URL: ${{ inputs.comments_url }}
+          TARGET_REPO: ${{ inputs.target_repo }}
+          TARGET_REF: ${{ inputs.target_ref }}
+          MODEL: ${{ inputs.model }}
+        run: python3 scripts/review.py > article-review.md
+
+      - name: Upload review report
+        uses: actions/upload-artifact@v4
+        with:
+          name: article-review-report
+          path: article-review.md
+          if-no-files-found: error
